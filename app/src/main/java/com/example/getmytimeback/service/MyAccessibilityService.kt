@@ -7,6 +7,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.example.getmytimeback.MainActivity
 import com.example.getmytimeback.data.BlockedSites
 import com.example.getmytimeback.data.SupportedBrowsers
+import com.example.getmytimeback.model.BlockedSite
 import com.example.getmytimeback.model.SupportedBrowserConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,11 +17,12 @@ import kotlinx.coroutines.launch
 
 class MyAccessibilityService : AccessibilityService() {
 
-    private val visitedSites = mutableMapOf<String, Long>()
-    private var trackingJob: Job? = null // Stores the coroutine job
+    private val blockedSites = BlockedSites.blockedSites
+    private val supportedBrowserConfigs = SupportedBrowsers.supportedBrowserConfigs
 
-    val blockedSites = BlockedSites.blockedSites
-    val supportedBrowserConfigs = SupportedBrowsers.supportedBrowserConfigs
+    private val visitedSites = mutableMapOf<String, Long>()
+    private var trackingJob: Job? = null
+    private var currentSite: BlockedSite? = null;
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val eventType = event.eventType
@@ -29,7 +31,7 @@ class MyAccessibilityService : AccessibilityService() {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
             AccessibilityEvent.TYPE_WINDOWS_CHANGED,
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                // check this
+                // check if I should stop the coroutine here
                 val parentNodeInfo = event.source ?: return
 
                 val packageName = event.packageName.toString()
@@ -54,6 +56,13 @@ class MyAccessibilityService : AccessibilityService() {
     }
 
     private fun startTrackingWebsite(blockedSiteKey: String) {
+
+        // I am in the same site, all good
+        if (currentSite != null && currentSite?.site == blockedSiteKey ) {
+            return
+        }
+
+        currentSite = blockedSites[blockedSiteKey];
         println("START TRACKING")
 
         val startTime = System.currentTimeMillis()
@@ -63,10 +72,16 @@ class MyAccessibilityService : AccessibilityService() {
         trackingJob = CoroutineScope(Dispatchers.Main).launch {
 
                 while (true) { //arreglar todo esto
-                    delay(1000) // Wait for 1 second
+                    delay(5000) // Wait for 5 second and check if the elapsed time is okay
+
+                    var currentTime = System.currentTimeMillis();
+
                     var elapsedTime =
-                        (System.currentTimeMillis() - visitedSites[blockedSiteKey]!!) / 1000
+                        ( currentTime - visitedSites[blockedSiteKey]!!) / 1000
                     blockedSites[blockedSiteKey]!!.consumedTime += elapsedTime
+
+                    visitedSites[blockedSiteKey] = currentTime
+
                     println("TIME IN THE SITE:" + blockedSites[blockedSiteKey]!!.consumedTime)
                     if (blockedSites[blockedSiteKey]!!.consumedTime >= blockedSites[blockedSiteKey]!!.allowedTime) {
                         drawOnTop()

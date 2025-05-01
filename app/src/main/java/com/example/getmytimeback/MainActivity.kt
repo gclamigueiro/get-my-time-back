@@ -10,9 +10,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.getmytimeback.data.BlockedSites
-import com.example.getmytimeback.model.BlockedSite
 import com.example.getmytimeback.service.MyAccessibilityService
+import com.example.getmytimeback.view.adapter.BlockedSiteAdapter
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,16 +34,10 @@ class MainActivity : AppCompatActivity() {
         checkAccessibilityService()
     }
 
-    fun displayBlockedSites(){
-        val textView = findViewById<TextView>(R.id.tv1)
-
-        // Convert map to a readable format
-        val sitesText = BlockedSites.blockedSites.entries.joinToString("\n") {
-            "${it.key} - Allowed Time: ${it.value.allowedTime} min - Consumed: ${it.value.consumedTime}"
-        }
-
-        // Display the text in TextView
-        textView.text = sitesText
+    private fun displayBlockedSites(){
+        val recyclerView = findViewById<RecyclerView>(R.id.blockedSitesList)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = BlockedSiteAdapter(BlockedSites.blockedSites.values.toList())
     }
 
     /**
