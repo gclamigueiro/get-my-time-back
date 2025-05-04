@@ -17,7 +17,6 @@ import kotlinx.coroutines.launch
 
 class MyAccessibilityService : AccessibilityService() {
 
-    private val blockedSites = BlockedSites.blockedSites
     private val supportedBrowserConfigs = SupportedBrowsers.supportedBrowserConfigs
 
     private val visitedSites = mutableMapOf<String, Long>()
@@ -31,20 +30,23 @@ class MyAccessibilityService : AccessibilityService() {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
             AccessibilityEvent.TYPE_WINDOWS_CHANGED,
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                // check if I should stop the coroutine here
-                val parentNodeInfo = event.source ?: return
+
+                val parentNodeInfo = event.source
+                if (parentNodeInfo == null) {
+                    stopTracking();
+                    return
+                }
 
                 val packageName = event.packageName.toString()
-
                 val browserConfig: SupportedBrowserConfig? = supportedBrowserConfigs[packageName]
-                if (browserConfig == null) { // validate if change browser, something like lastBrowser != ..
+                if (browserConfig == null) {
                     stopTracking() // User switched to another app
                     return
                 }
 
                 val browserUrl: String = captureUrl(parentNodeInfo, browserConfig) ?: return
 
-                val blockedSiteKey = blockedSites.keys.firstOrNull { browserUrl.contains(it) }
+                val blockedSiteKey = BlockedSites.blockedSites.keys.firstOrNull { browserUrl.contains(it) }
 
                 if (blockedSiteKey != null) {
                     startTrackingWebsite(blockedSiteKey)
@@ -62,37 +64,49 @@ class MyAccessibilityService : AccessibilityService() {
             return
         }
 
-        currentSite = blockedSites[blockedSiteKey];
-        println("START TRACKING")
+        currentSite = BlockedSites.blockedSites[blockedSiteKey];
+        println("START TRACKING " + currentSite?.site)
 
-        val startTime = System.currentTimeMillis()
-        visitedSites[blockedSiteKey] = startTime
+        visitedSites[blockedSiteKey] = System.currentTimeMillis()
 
         trackingJob?.cancel() // Cancel any previous tracking job
         trackingJob = CoroutineScope(Dispatchers.Main).launch {
 
-                while (true) { //arreglar todo esto
-                    delay(5000) // Wait for 5 second and check if the elapsed time is okay
+                // if all the time for the site is already consumed
+               // give 1.5 seconds to close the tab and stop tracking
+                if (checkConsumedTime(blockedSiteKey)) {
+                    delay(1500)
+                    drawOnTop()
+                    stopTracking()
+                }
 
+                while (true) {
+                    delay(5000) // add consumed time every 5 seconds
                     var currentTime = System.currentTimeMillis();
 
                     var elapsedTime =
                         ( currentTime - visitedSites[blockedSiteKey]!!) / 1000
-                    blockedSites[blockedSiteKey]!!.consumedTime += elapsedTime
+                    BlockedSites.blockedSites[blockedSiteKey]!!.consumedTime += elapsedTime
 
                     visitedSites[blockedSiteKey] = currentTime
 
-                    println("TIME IN THE SITE:" + blockedSites[blockedSiteKey]!!.consumedTime)
-                    if (blockedSites[blockedSiteKey]!!.consumedTime >= blockedSites[blockedSiteKey]!!.allowedTime) {
+                    if (checkConsumedTime(blockedSiteKey)) {
+                        stopTracking() // Stop tracking once the time limit is reached
                         drawOnTop()
-                        trackingJob?.cancel() // Stop tracking once the time limit is reached
                         break
                     }
                 }
         }
     }
 
+    private fun checkConsumedTime(blockedSiteKey: String) =
+        BlockedSites.blockedSites[blockedSiteKey]!!.consumedTime >= BlockedSites.blockedSites[blockedSiteKey]!!.allowedTime
+
     private fun stopTracking() {
+        if (currentSite == null) {
+            return
+        }
+        currentSite = null;
         trackingJob?.cancel() // Stop the coroutine
         trackingJob = null
         visitedSites.clear() // Clear tracking data
