@@ -2,14 +2,13 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:padding="24dp"
     android:background="?android:attr/selectableItemBackground">
 
     <TextView
         android:id="@+id/tvSiteName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Site Name"
         android:textStyle="bold"
         android:textSize="18sp"
         android:textColor="@android:color/black"/>
@@ -18,7 +17,6 @@
         android:id="@+id/tvAllowedTime"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Allowed Time"
         android:textSize="16sp"
         android:textColor="@android:color/darker_gray"/>
 
@@ -26,7 +24,6 @@
         android:id="@+id/tvConsumedTime"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Consumed Time"
         android:textSize="16sp"
         android:textColor="@android:color/darker_gray"/>
 </LinearLayout>

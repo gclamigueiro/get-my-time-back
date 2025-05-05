@@ -21,7 +21,7 @@ class MyAccessibilityService : AccessibilityService() {
 
     private val visitedSites = mutableMapOf<String, Long>()
     private var trackingJob: Job? = null
-    private var currentSite: BlockedSite? = null;
+    private var currentSite: BlockedSite? = null
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val eventType = event.eventType
@@ -33,7 +33,7 @@ class MyAccessibilityService : AccessibilityService() {
 
                 val parentNodeInfo = event.source
                 if (parentNodeInfo == null) {
-                    stopTracking();
+                    stopTracking()
                     return
                 }
 
@@ -51,7 +51,7 @@ class MyAccessibilityService : AccessibilityService() {
                 if (blockedSiteKey != null) {
                     startTrackingWebsite(blockedSiteKey)
                 }else {
-                    stopTracking(); // no estoy seguro pq si borra la url pero sigue en el sitio?
+                    stopTracking()
                 }
             }
         }
@@ -63,28 +63,25 @@ class MyAccessibilityService : AccessibilityService() {
         if (currentSite != null && currentSite?.site == blockedSiteKey ) {
             return
         }
-
-        currentSite = BlockedSites.blockedSites[blockedSiteKey];
-        println("START TRACKING " + currentSite?.site)
-
+        currentSite = BlockedSites.blockedSites[blockedSiteKey]
         visitedSites[blockedSiteKey] = System.currentTimeMillis()
 
         trackingJob?.cancel() // Cancel any previous tracking job
         trackingJob = CoroutineScope(Dispatchers.Main).launch {
 
                 // if all the time for the site is already consumed
-               // give 1.5 seconds to close the tab and stop tracking
+               // give 2 seconds to close the tab and stop tracking
                 if (checkConsumedTime(blockedSiteKey)) {
-                    delay(1500)
+                    delay(2000)
                     drawOnTop()
                     stopTracking()
                 }
 
                 while (true) {
                     delay(5000) // add consumed time every 5 seconds
-                    var currentTime = System.currentTimeMillis();
+                    val currentTime = System.currentTimeMillis();
 
-                    var elapsedTime =
+                    val elapsedTime =
                         ( currentTime - visitedSites[blockedSiteKey]!!) / 1000
                     BlockedSites.blockedSites[blockedSiteKey]!!.consumedTime += elapsedTime
 
