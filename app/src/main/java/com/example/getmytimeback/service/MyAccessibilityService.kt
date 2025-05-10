@@ -159,7 +159,7 @@ class MyAccessibilityService : AccessibilityService() {
     private fun resetInactivityTimer() {
         inactivityJob?.cancel()
         inactivityJob = CoroutineScope(Dispatchers.Default).launch {
-            delay(2 * 60  * 1000) // two minutes
+            delay(1 * 60  * 1000) // one minute
             println("Inactivity timeout reached, stopping tracking...")
             stopTracking(6)
         }

@@ -19,6 +19,13 @@ object BlockedSites {
             val obj = jsonArray.getJSONObject(i)
             val domain = obj.getString("domain")
             val allowedTime = obj.getInt("allowed_time")
+
+            // check if domain already exists in blockedSites, then just update the allowed time
+            if (blockedSites.containsKey(domain)) {
+                blockedSites[domain]?.allowedTime = allowedTime * 60
+                continue
+            }
+
             blockedSites[domain] = BlockedSite(domain, allowedTime * 60, 0)
         }
     }
