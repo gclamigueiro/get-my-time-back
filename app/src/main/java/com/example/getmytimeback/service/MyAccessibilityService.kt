@@ -23,24 +23,27 @@ class MyAccessibilityService : AccessibilityService() {
     private var trackingJob: Job? = null
     private var currentSite: BlockedSite? = null
 
+    private var inactivityJob: Job? = null
+
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val eventType = event.eventType
-
         when (eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
             AccessibilityEvent.TYPE_WINDOWS_CHANGED,
-            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+            AccessibilityEvent.TYPE_VIEW_SCROLLED,
+            AccessibilityEvent.TYPE_VIEW_CLICKED,
+            AccessibilityEvent.TYPE_VIEW_TARGETED_BY_SCROLL,
+                 -> {
 
-                val parentNodeInfo = event.source
-                if (parentNodeInfo == null) {
-                    stopTracking()
-                    return
-                }
+                val parentNodeInfo = event.source ?: return
+
+                resetInactivityTimer()
 
                 val packageName = event.packageName.toString()
                 val browserConfig: SupportedBrowserConfig? = supportedBrowserConfigs[packageName]
                 if (browserConfig == null) {
-                    stopTracking() // User switched to another app
+                    stopTracking(2) // User switched to another app
                     return
                 }
 
@@ -51,7 +54,7 @@ class MyAccessibilityService : AccessibilityService() {
                 if (blockedSiteKey != null) {
                     startTrackingWebsite(blockedSiteKey)
                 }else {
-                    stopTracking()
+                    stopTracking(3) // User switched to another not blocked site
                 }
             }
         }
@@ -63,8 +66,9 @@ class MyAccessibilityService : AccessibilityService() {
         if (currentSite != null && currentSite?.site == blockedSiteKey ) {
             return
         }
+
         currentSite = BlockedSites.blockedSites[blockedSiteKey]
-        visitedSites[blockedSiteKey] = System.currentTimeMillis()
+        println("START TRACKING: " + currentSite?.site)
 
         trackingJob?.cancel() // Cancel any previous tracking job
         trackingJob = CoroutineScope(Dispatchers.Main).launch {
@@ -74,39 +78,54 @@ class MyAccessibilityService : AccessibilityService() {
                 if (checkConsumedTime(blockedSiteKey)) {
                     delay(2000)
                     drawOnTop()
-                    stopTracking()
+                    stopTracking(4)
                 }
 
-                while (true) {
-                    delay(5000) // add consumed time every 5 seconds
-                    val currentTime = System.currentTimeMillis();
+            while (true) {
+                delay(2000) // Add consumed time every 2 seconds
 
-                    val elapsedTime =
-                        ( currentTime - visitedSites[blockedSiteKey]!!) / 1000
-                    BlockedSites.blockedSites[blockedSiteKey]!!.consumedTime += elapsedTime
+                val currentTime = System.currentTimeMillis()
 
-                    visitedSites[blockedSiteKey] = currentTime
-
-                    if (checkConsumedTime(blockedSiteKey)) {
-                        stopTracking() // Stop tracking once the time limit is reached
-                        drawOnTop()
-                        break
-                    }
+                // Check if we have a valid starting point
+                val lastVisitTime = visitedSites[blockedSiteKey]
+                if (lastVisitTime == null) {
+                    visitedSites[blockedSiteKey] = currentTime // Initialize if first visit
+                    continue
                 }
+
+                // Calculate elapsed time in seconds
+                val elapsedTime = (currentTime - lastVisitTime) / 1000 // in seconds
+                BlockedSites.blockedSites[blockedSiteKey]!!.consumedTime += elapsedTime
+
+                // Update the last visit time to the current time
+                visitedSites[blockedSiteKey] = currentTime
+
+                // Check if the consumed time exceeds the allowed time
+                if (checkConsumedTime(blockedSiteKey)) {
+                    stopTracking(5) // Stop tracking once the time limit is reached
+                    drawOnTop()
+                    break
+                }
+            }
+
         }
     }
 
     private fun checkConsumedTime(blockedSiteKey: String) =
         BlockedSites.blockedSites[blockedSiteKey]!!.consumedTime >= BlockedSites.blockedSites[blockedSiteKey]!!.allowedTime
 
-    private fun stopTracking() {
+    private fun stopTracking(pos: Int) {
         if (currentSite == null) {
             return
         }
+        println("STOP TRACKING: "+ "pos: " + pos + " site: " + currentSite?.site)
+
         currentSite = null;
         trackingJob?.cancel() // Stop the coroutine
         trackingJob = null
         visitedSites.clear() // Clear tracking data
+        inactivityJob?.cancel()
+        inactivityJob = null
     }
 
     private fun captureUrl(info: AccessibilityNodeInfo, config: SupportedBrowserConfig): String? {
@@ -130,11 +149,20 @@ class MyAccessibilityService : AccessibilityService() {
             this,
             MainActivity::class.java
         )
-        lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        lockIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        lockIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-
+        lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        lockIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        lockIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         startActivity(lockIntent)
+    }
+
+    // find a better way to do this, the thing is when I close the browser any event it is triggered
+    private fun resetInactivityTimer() {
+        inactivityJob?.cancel()
+        inactivityJob = CoroutineScope(Dispatchers.Default).launch {
+            delay(2 * 60  * 1000) // two minutes
+            println("Inactivity timeout reached, stopping tracking...")
+            stopTracking(6)
+        }
     }
 
     override fun onInterrupt() {

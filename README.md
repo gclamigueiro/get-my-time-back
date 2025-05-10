@@ -1,0 +1,2 @@
+- important the battery saver option
+- allow popup permission, both in other permission

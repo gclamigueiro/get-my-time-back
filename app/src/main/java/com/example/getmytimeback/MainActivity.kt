@@ -82,8 +82,6 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
             startActivity(intent)
             Toast.makeText(this, "Please enable MyAccessibilityService in the settings", Toast.LENGTH_LONG).show()
-        } else {
-            Toast.makeText(this, "Accessibility Service is already enabled", Toast.LENGTH_SHORT).show()
         }
     }
 
