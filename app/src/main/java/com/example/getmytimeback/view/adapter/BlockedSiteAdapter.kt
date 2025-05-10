@@ -25,7 +25,7 @@ class BlockedSiteAdapter(private val sites: List<BlockedSite>) :
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val site = sites[position]
-        holder.siteName.text =  "Site name: ${site.site}"
+        holder.siteName.text =  "Site name: ${site.domain}"
         val allowedMinutes = site.allowedTime / 60
         holder.allowedTime.text = "Allowed time: ${allowedMinutes} min"
         val consumedMinutes = site.consumedTime / 60

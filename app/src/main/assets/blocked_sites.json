@@ -1,0 +1,4 @@
+[
+  { "domain": "x.com", "allowed_time": 15},
+  { "domain": "facebook.com", "allowed_time": 5}
+]

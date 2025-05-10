@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-
+        BlockedSites.loadFromAssets(this)
         displayBlockedSites()
 
         // Check if Accessibility Service is enabled
@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity() {
             // Open Accessibility Settings to enable the service
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
             startActivity(intent)
-            Toast.makeText(this, "Please enable MyAccessibilityService in the settings", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Please enable Accessibility", Toast.LENGTH_LONG).show()
         }
     }
 

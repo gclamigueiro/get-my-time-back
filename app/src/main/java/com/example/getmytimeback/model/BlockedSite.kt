@@ -1,7 +1,7 @@
 package com.example.getmytimeback.model
 
 data class BlockedSite(
-    val site: String,
+    val domain: String,
     val allowedTime: Int,
     var consumedTime: Long
 )

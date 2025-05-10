@@ -63,12 +63,12 @@ class MyAccessibilityService : AccessibilityService() {
     private fun startTrackingWebsite(blockedSiteKey: String) {
 
         // I am in the same site, all good
-        if (currentSite != null && currentSite?.site == blockedSiteKey ) {
+        if (currentSite != null && currentSite?.domain == blockedSiteKey ) {
             return
         }
 
         currentSite = BlockedSites.blockedSites[blockedSiteKey]
-        println("START TRACKING: " + currentSite?.site)
+        println("START TRACKING: " + currentSite?.domain)
 
         trackingJob?.cancel() // Cancel any previous tracking job
         trackingJob = CoroutineScope(Dispatchers.Main).launch {
@@ -118,7 +118,7 @@ class MyAccessibilityService : AccessibilityService() {
         if (currentSite == null) {
             return
         }
-        println("STOP TRACKING: "+ "pos: " + pos + " site: " + currentSite?.site)
+        println("STOP TRACKING: "+ "pos: " + pos + " site: " + currentSite?.domain)
 
         currentSite = null;
         trackingJob?.cancel() // Stop the coroutine
