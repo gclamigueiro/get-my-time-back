@@ -38,7 +38,6 @@ class MainActivity : AppCompatActivity() {
         BlockedSites.loadFromAssets(this)
         displayBlockedSites()
 
-        // Check if Accessibility Service is enabled
         checkAccessibilityService()
     }
 
@@ -53,25 +52,6 @@ class MainActivity : AppCompatActivity() {
         recyclerView.adapter = BlockedSiteAdapter(BlockedSites.blockedSites.values.toList())
     }
 
-    private fun scheduleDailyReset(context: Context) {
-        val now = LocalDateTime.now()
-        val targetTime = now.withHour(3).withMinute(0).withSecond(0).withNano(0)
-        val initialDelay = Duration.between(now, targetTime).let {
-            if (it.isNegative) it.plusDays(1) else it
-        }
-
-        val dailyWorkRequest = PeriodicWorkRequestBuilder<ResetTimeWorker>(
-            1, TimeUnit.DAYS
-        )
-            .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            "resetTimeWork",
-            ExistingPeriodicWorkPolicy.UPDATE,
-            dailyWorkRequest
-        )
-    }
 
     /**
      * Check if MyAccessibilityService is enabled and guide the user to enable it if not.
@@ -101,5 +81,30 @@ class MainActivity : AppCompatActivity() {
             }
         }
         return false
+    }
+
+    /**
+     * Schedule a daily reset of the time spent on blocked sites at 3 AM.
+     * This uses WorkManager to handle the scheduling.
+     * (when testing, I noticed that the reset was not always happening at 3 AM, So I guess is a better way to do this)
+     */
+    private fun scheduleDailyReset(context: Context) {
+        val now = LocalDateTime.now()
+        val targetTime = now.withHour(3).withMinute(0).withSecond(0).withNano(0)
+        val initialDelay = Duration.between(now, targetTime).let {
+            if (it.isNegative) it.plusDays(1) else it
+        }
+
+        val dailyWorkRequest = PeriodicWorkRequestBuilder<ResetTimeWorker>(
+            1, TimeUnit.DAYS
+        )
+            .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            "resetTimeWork",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            dailyWorkRequest
+        )
     }
 }

@@ -5,6 +5,9 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.example.getmytimeback.data.BlockedSites
 
+/**
+ * Worker to reset the consumed time for all blocked sites.
+ */
 class ResetTimeWorker(appContext: Context, workerParams: WorkerParameters):
     Worker(appContext, workerParams) {
     override fun doWork(): Result {
